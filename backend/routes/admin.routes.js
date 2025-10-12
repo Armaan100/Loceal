@@ -6,6 +6,8 @@ const body = require("express-validator");
 const adminController = require("../controllers/admin.controllers");
 
 router.post("/register", adminController.Register);
+router.post("/login", adminController.Login);
+router.get("/logout", adminController.Logout);
 
 module.exports = router;
 
