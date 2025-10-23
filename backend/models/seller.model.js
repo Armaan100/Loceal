@@ -18,6 +18,7 @@ const SellerSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
+        select: false
     },
     phone: {
         type: String,
@@ -31,7 +32,7 @@ const SellerSchema = new mongoose.Schema({
         type: {
             type: String,
             enum: ["Point"],
-            defaule: "Point"
+            default: "Point"
         },
         coordinates: {
             type: [Number], // [longitude, latitude]
@@ -61,6 +62,11 @@ const SellerSchema = new mongoose.Schema({
             landmark: String
         }
     },
+    businessName: {
+        type: String,
+        required: true,
+        trim: true
+    },
     businessType: {
         type: String,
         required: true
@@ -78,7 +84,7 @@ const SellerSchema = new mongoose.Schema({
         },
         count: {
             type: Number,
-            deault: 0
+            default: 0
         }
     },
     totalSales: {
