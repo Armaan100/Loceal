@@ -196,7 +196,32 @@ module.exports.VerifyCustomer = async (req, res) => {
 }
 
 module.exports.Login = async (req, res) => {
-    
+    const {email, password} = req.body;
+
+    const customer = await CustomerModel.findOne({email: email}).select("+password");
+
+    if(!customer){
+        return res.status(400).json({
+            message: "Customer not found"
+        })
+    }
+
+    const validPassword = await customer.comparePassword(password);
+
+    if(!validPassword){
+        return res.status(400).json({
+            message: "Invalid Credentials"
+        })
+    }
+
+    const token = customer.generateAuthToken();
+    res.cookie("token", token);
+
+    res.status(200).json({
+        message: "Customer logged in successfully",
+        customer,
+        token
+    });
 }
 
 module.exports.Logout = async (req, res) => {
