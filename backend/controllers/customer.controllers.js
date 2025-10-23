@@ -157,7 +157,42 @@ module.exports.Register = async (req, res) => {
 }
 
 module.exports.VerifyCustomer = async (req, res) => {
-    
+    try{
+        const token = req.params.token.trim();
+        
+        if(!token){
+            return res.status(401).json({
+                message: "Unauthorized. No token provided."
+            })
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        if(!decoded || !decoded._id){
+            return res.status(401).json({
+                message: "Unauthorized. Invalid token."
+            })
+        }
+
+        const customer = await CustomerModel.findById(decoded._id);
+
+        if(!customer){
+            return res.status(404).json({
+                message: "Customer not found."
+            })
+        }
+
+        customer.isVerified = true;
+        await customer.save();
+
+        res.status(200).json({
+            message: "Customer verified successfully."
+        })
+    }catch(err){
+        return res.status(500).json({
+            error: err.message
+        })
+    }
 }
 
 module.exports.Login = async (req, res) => {
