@@ -1,9 +1,16 @@
+const SellerModel = require("../models/seller.model");
+const jwt = require("jsonwebtoken");
+const sendEmail = require("../libs/nodemailer");
+const fs = require("fs");
+const path = require("path"); 
+const crypto = require("crypto");
+const { getCoordinatesFromAddress } = require("../libs/geocoding");
 
 module.exports.Register = async (req, res) => {
     try{
         const {name, email, password, phone, location, businessName} = req.body;
 
-        const sellerExists = await sellerModel.findOne({email: email});
+        const sellerExists = await SellerModel.findOne({email: email});
         
         if(sellerExists){
             return res.status(400).json({
@@ -11,11 +18,11 @@ module.exports.Register = async (req, res) => {
             })
         }
 
-        const hashPassword = await sellerModel.hashPassword(password);
+        const hashPassword = await SellerModel.hashPassword(password);
 
         const {coordinates, address} = await getCoordinatesFromAddress(location);
 
-        const seller = new sellerModel({
+        const seller = new SellerModel({
             name,
             email,
             password: hashPassword,
@@ -147,11 +154,46 @@ module.exports.Register = async (req, res) => {
 }
 
 module.exports.VerifyCustomer = async (req, res) => {
+    try{
+            const token = req.params.token.trim();
+            
+            if(!token){
+                return res.status(401).json({
+                    message: "Unauthorized. No token provided."
+                })
+            }
     
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+            if(!decoded || !decoded._id){
+                return res.status(401).json({
+                    message: "Unauthorized. Invalid token."
+                })
+            }
+    
+            const seller = await SellerModel.findById(decoded._id);
+    
+            if(!seller){
+                return res.status(404).json({
+                    message: "Seller not found."
+                })
+            }
+    
+            seller.isVerified = true;
+            await seller.save();
+    
+            res.status(200).json({
+                message: "Seller verified successfully."
+            })
+        }catch(err){
+            return res.status(500).json({
+                error: err.message
+            })
+        }
 }
 
 module.exports.Login = async (req, res) => {
-    res.status(200).json({ message: "Customer registered successfully" });
+
 }
 
 module.exports.Logout = async (req, res) => {
