@@ -225,5 +225,9 @@ module.exports.Login = async (req, res) => {
 }
 
 module.exports.Logout = async (req, res) => {
-    res.status(200).json({ message: "Customer registered successfully" });
+    res.clearCookie("token");
+    
+    res.status(200).json({
+        message: "Customer logged out successfully"
+    })
 }
