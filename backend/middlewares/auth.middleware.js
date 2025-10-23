@@ -40,3 +40,38 @@ module.exports.authCustomer = async (req, res, next) => {
 }
 
 
+
+module.exports.authSeller = async (req, res, next) => {
+    try{
+        const token = req.cookies.token || req.headers.authorization.split(' ')[1]; // milam frontend r lgt jetia bonam
+        
+        if(!token){
+            return res.status(401).json({
+                message: "Unauthorized"
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        if(!decoded || !decoded._id){
+            return res.status(401).json({
+                message: "Unauthorized. Invalid token."
+            });
+        }
+
+        const seller = await SellerModel.findById(decoded._id);
+
+        if(!seller){
+            return res.status(404).json({
+                message: "Seller not found."
+            });
+        }
+
+        req.seller = seller;
+        next();
+    }catch(err){
+        return res.status(500).json({
+            message: err.message
+        })
+    }
+}
