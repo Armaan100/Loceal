@@ -6,7 +6,7 @@ const body = require("express-validator");
 const sellerController = require("../controllers/seller.controllers");
 
 router.post("/register", sellerController.Register);
-router.post("/verifySeller/:token", sellerController.VerifySeller); 
+router.get("/verifySeller/:token", sellerController.VerifySeller); 
 router.post("/login", sellerController.Login);
 router.get("/logout", sellerController.Logout);
 

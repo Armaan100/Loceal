@@ -24,10 +24,10 @@ const SellerSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    profileImage: {
-        type: String,
-        default: null
-    },
+    // profileImage: {
+    //     type: String,
+    //     default: null
+    // },
     location: {
         type: {
             type: String,
@@ -66,14 +66,6 @@ const SellerSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true
-    },
-    businessType: {
-        type: String,
-        required: true
-    },
-    businessDescription: {
-        type: String,
-        required: true
     },
     rating: {
         average: {

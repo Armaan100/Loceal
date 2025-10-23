@@ -29,7 +29,7 @@ module.exports.Register = async (req, res) => {
         const customer = new CustomerModel({
             name,
             email,
-            password,
+            password: hashPassword,
             phone,
             defaultAddress: {
                 type: "Point",
