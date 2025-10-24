@@ -10,6 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { getCoordinatesFromAddress } = require("../libs/geocoding");
 const { default: mongoose } = require("mongoose");
+const { createTransport } = require("nodemailer");
 
 module.exports.Register = async (req, res) => {
     try{
@@ -547,3 +548,52 @@ module.exports.GetCart = async (req, res) => {
     }
 }
 
+module.exports.RemoveFromCart = async (req, res) => {
+    try{
+        const customerId = req.customer._id;
+        const {productId} = req.params;
+
+        const cart = await CartModel.findOne({
+            customer: customerId
+        });
+
+        if(!cart){
+            return res.status(404).json({
+                success: false,
+                message: "Cart not found"
+            })
+        }
+
+        // Cart r pra otora
+        cart.items = cart.items.filter(item =>
+            item.product.toString() !== productId
+        )
+        
+
+        await cart.save();
+
+        // populate and calculate total
+        await cart.populate("items.product", "title price images unit stock isAvailable");
+
+        await cart.populate("items.seller", "businessName rating");
+
+        let total = 0;
+        for(const item of cart.items){
+            total += item.priceAtAdd * item.quantity;
+        }
+
+        res.status(200).json({
+            success: true,
+            cart: {
+                ...cart.toObject(),
+                total
+            },
+            message: "Product removed from cart successfully"
+        });
+    }catch(err){
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+}
