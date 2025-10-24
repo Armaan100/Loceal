@@ -8,6 +8,7 @@ const fs = require("fs");
 const path = require("path"); 
 const crypto = require("crypto");
 const { getCoordinatesFromAddress } = require("../libs/geocoding");
+const { default: mongoose } = require("mongoose");
 
 module.exports.Register = async (req, res) => {
     try{
@@ -343,5 +344,53 @@ module.exports.GetProducts = async (req, res) => {
             success: false,  
             error: err.message
         })
+    }
+}
+
+module.exports.GetProductDetails = async (req, res) => {
+    try{
+        const {productId} = req.params;
+
+        // validating product Id
+        if(!mongoose.Types.ObjecId.isValid(productId)){
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Product ID"
+            });
+        }
+
+        const product = await ProductModel.findById(productId)
+        .populate("seller", "businessName rating totalSale location phone");
+
+        // such product not found
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        // check if product is available
+        if (!product.isAvailable || product.stock <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Product is currently unavailable"
+            });
+        }
+
+        // Increment view count 
+        product.views += 1;
+        await product.save();
+
+        res.status(200).json({
+            success: true,
+            product,
+            message: "Product details fetched successfully"
+        });
+    }catch(err){
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
     }
 }
