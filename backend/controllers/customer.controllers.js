@@ -671,3 +671,38 @@ module.exports.UpdateCartItem = async (req, res) => {
     }
 }
 
+module.exports.ClearCart = async (req, res) => {
+    try{
+        customerId = req.customer._id;
+
+        const cart = await CartModel.findOne({customer: customerId});
+
+        if(!cart){
+            return res.status(404).json({
+                success: false,
+                message: "Cart not found"
+            });
+        }
+
+        // clear all items
+        cart.items = [];
+        
+        await cart.save();
+
+        res.status(200).json({
+            success: true,
+            cart: {
+                items: [],
+                total: 0
+            },
+            message: "Cart cleared successfully"
+        });
+    }catch(err){
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+}
+
+
