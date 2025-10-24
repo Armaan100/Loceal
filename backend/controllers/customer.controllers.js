@@ -597,3 +597,77 @@ module.exports.RemoveFromCart = async (req, res) => {
         });
     }
 }
+
+module.exports.UpdateCartItem = async (req, res) => {
+    try{
+        const customerId = req.customer._id;
+        const {productId} = req.params;
+        const {quantity} = req.body;
+
+        // validating input
+        if (!quantity || quantity < 1) {
+            return res.status(400).json({
+                success: false,
+                message: "Quantity must be at least 1"
+            });
+        }
+
+        // finding cart
+        const cart = await CartModel.findOne({
+            customer: customerId
+        });
+
+        
+        // find the item in the cart
+        const cartItem = cart.items.find(item =>
+            item.product.toString() === productId
+        );
+
+        if(!cartItem){
+            return res.status(404).json({
+                success: false,
+                message: "Product not found in cart"
+            });
+        }
+
+
+        // check product availability and stock
+        const product = await ProductModel.findById(productId);
+
+        if(!product || quantity > product.stock){
+            return res.status(400).json({
+                success: false,
+                message: `Only ${product.stock} items are available in stock`
+            });
+        }
+
+        // update quantity
+        cartItem.quantity = quantity;
+
+        await cart.save();
+
+        // populate and calculate total
+        await cart.populate("items.product", "title price images unit stock isAvailable");
+        await cart.populate("items.seller", "businessName rating");
+
+        let total = 0;
+        for(const item of cart.items){
+            total += item.priceAtAdd * item.quantity;
+        }
+
+        res.status(200).json({
+            success: true,
+            cart: {
+                ...cart.toObject(),
+                total
+            },
+            message: "Cart item updated successfully"
+        });
+    }catch(err){
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+}
+
