@@ -17,6 +17,8 @@ router.get("/logout", customerController.Logout);
 router.get("/products", authCustomer, customerController.GetProducts)
 // get single product details
 router.get("/products/:productId", authCustomer, customerController.GetProductDetails)
+
+
 // get cart details
 router.get("/cart", authCustomer, customerController.GetCart);
 // add to cart

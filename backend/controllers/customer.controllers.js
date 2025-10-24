@@ -504,8 +504,46 @@ module.exports.AddToCart = async (req, res) => {
 
 module.exports.GetCart = async (req, res) => {
     try{
+        const customerId = req.customer._id;
 
+        const cart = await CartModel.findOne({
+            customer: customerId
+        })
+        .populate("items.product", "title price images unit stock isAvailable")
+        .populate("items.seller", "businessName rating");
+
+        
+        if(!cart){
+            return res.status(200).json({
+                success: true,
+                cart: {
+                    items: [],
+                    total: 0
+                },
+                message: "Cart is empty"
+            });
+        }
+
+        
+        // total price calc kor
+        let total = 0;
+        cart.items.forEach(item => {
+            total += items.priceAtAdd*item.quantity;
+        });
+
+        res.status(200).json({
+            success: true,
+            cart: {
+                ...cart.toObject(),
+                total: total
+            },
+            message: "Cart fetched successfully"
+        });
     }catch(err){
-
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
     }
 }
+
