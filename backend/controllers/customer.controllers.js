@@ -1,6 +1,7 @@
 const CustomerModel = require("../models/customer.model");
 const ProductModel = require("../models/product.model");
 const SellerModel = require("../models/seller.model");
+const CartModel = require("../models/cart.model");
 
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../libs/nodemailer");
@@ -392,5 +393,119 @@ module.exports.GetProductDetails = async (req, res) => {
             success: false,
             error: err.message
         });
+    }
+}
+
+module.exports.AddToCart = async (req, res) => {
+    try{
+        const {productId, quantity = 1} = req.body;
+        const customerId = req.customer._id;
+
+        // validating input
+        if(!productId){
+            return res.status(400).json({
+                success: false,
+                message: "Product ID is required"
+            });
+        }
+
+        // checking if product tu ase ne nai aru available oo ase ne nai
+        const product = await ProductModel.findById(productId);
+
+        if(!product){
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        if(!product.isAvailable || product.stock <= 0){
+            return res.status(400).json({
+                success: false,
+                message: "Product is currently unavailable"
+            });
+        }
+
+        // check id product tu verified seller r hoi ne naa
+        if(!product.seller.isVerified){
+            return res.status(400).json({
+                success: false,
+                message: "Cannot add products from unverified sellers to cart"
+            });
+        }
+        
+        // checking ki requested quanity available ase ne nai
+        if(quantity > product.stock){
+            return res.status(400).json({
+                success: false,
+                message: `Only ${product.stock} items are available in stock`
+            });
+        }
+
+        // find or create -> customer krne
+        let cart = await CartModel.findOne({customer: customerId});
+
+        // cart nai iyar
+        if(!cart){
+            cart = new CartModel({
+                customer: customerId,
+                items: []
+            });
+        }
+
+        // check ki product already exists cart t
+        const existingItemIndex = cart.items.findIndex(
+            item => item.product.toString() === productId
+        );
+
+        if(existingItemIndex > -1){
+            // new quantity loi update mar
+            const newQuantity = cart.items[existingItemIndex].quantity + quantity;
+
+            if(newQuantity > product.stock){
+                return res.status(400).json({
+                    success: false,
+                    message: `Only ${product.stock} items are available in stock`
+                });
+            }
+
+            // update price in case it changed
+            cart.items[existingItemIndex].quantity = newQuantity;
+            cart.items[existingItemIndex].priceAtAdd = product.price;
+        }else{
+            // new item cart t
+            cart.items.push({
+                product: productId,
+                seller: product.seller,
+                quantity: quantity,
+                priceAtAdd: product.price
+            });
+        }
+
+        await cart.save();
+
+        // cart tu -> populate with product details before sending response
+
+        await cart.populate("items.product", "title price images unit");
+        await cart.populate("items.seller", "businessName");
+
+        res.status(200).json({
+            success: true,
+            cart,
+            message: "Product added to cart successfully"
+        });
+    }catch(err){
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+}
+
+module.exports.GetCart = async (req, res) => {
+    try{
+
+    }catch(err){
+
     }
 }
