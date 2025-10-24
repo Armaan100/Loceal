@@ -13,6 +13,9 @@ router.post("/login", customerController.Login);
 router.get("/logout", customerController.Logout);
 
 // browse all products
-router.get("/products", customerController.GetProducts)
+router.get("/products", authCustomer, customerController.GetProducts)
+
+// get single product details
+router.get("/products/:productId", authCustomer, customerController.GetProductDetails)
 
 module.exports = router;

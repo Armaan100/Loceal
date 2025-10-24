@@ -1,5 +1,6 @@
 const CustomerModel = require("../models/customer.model");
 const ProductModel = require("../models/product.model");
+const SellerModel = require("../models/seller.model");
 
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../libs/nodemailer");
@@ -241,19 +242,106 @@ module.exports.GetProducts = async (req, res) => {
         // validating coordinates
         if(!lat || !lng){
             return res.status(400).json({
+                success: false,
                 message: "Latitude and Longitude are required"
             });
         }
 
         const customerCoordinates = [parseFloat(lng), parseFloat(lat)];
 
-        // geo spatial query - within specified radius
-        const products = await ProductModel.aggregate([
-            {
-                
-            }
-        ])
-    }catch(err){
+        // find seller within the radis
+        const nearbySellers = await SellerModel.find({
+            "location.coordinates": {
+                $nearSphere: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: customerCoordinates
+                    },
+                    $maxDistance: maxDistance*1000 // km 2 m bonalu
+                }
+            },
+            isVerified: true
+        }).select("_id businessName rating location");
 
+        if(nearbySellers.length === 0){
+            return res.status(200).json({
+                success: true,
+                products: [],
+                total: 0,
+                location: {
+                    lat: parseFloat(lat),
+                    lng: parseFloat(lng),
+                    maxDistance: parseInt(maxDistance)
+                },
+                message: "No Sellers found in your area"
+            });
+        }
+
+        const sellerIds = nearbySellers.map(seller => seller._id);
+
+        // find the available products from these sellers
+        const products = await ProductModel.find({
+            seller: {
+                $in: sellerIds
+            },
+            isAvailable: true,
+            stock: { $gt: 0 }
+        })
+        .sort({ createdAt: -1 });
+
+        //calculate approximate distance for each product
+        const productsWithLocation = products.map(product => {
+            const seller = nearbySellers.find(s => s._id.toString() === product.seller._id.toString());
+            
+            if(!seller)
+                return null;
+
+            // Simple distance calculation (approximate)
+            const calculateDistance = (lat1, lon1, lat2, lon2) => {
+                const R = 6371; // Earth's radius in km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = 
+                    Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c; // Distance in km
+            };
+
+            const sellerCoords = seller.location.coordinates;
+            const distance = calculateDistance(
+                parseFloat(lat), 
+                parseFloat(lng), 
+                sellerCoords[1], // latitude
+                sellerCoords[0]  // longitude
+            );
+
+            return {
+                ...product.toObject(),
+                distance: Math.round(distance * 10) / 10, // Round to 1 decimal
+                sellerLocation: seller.location.address
+            };
+        }).filter(product => product !== null);
+
+        // Sort by distance (nearest first)
+        productsWithLocation.sort((a, b) => a.distance - b.distance);
+
+        res.status(200).json({
+            success: true,
+            products: productsWithLocation,
+            total: productsWithLocation.length,
+            location: {
+                lat: parseFloat(lat),
+                lng: parseFloat(lng),
+                maxDistance: parseInt(maxDistance)
+            },
+            message: `Found ${productsWithLocation.length} products from ${nearbySellers.length} nearby sellers within ${maxDistance}km`
+        });
+    }catch(err){
+        return res.status(500).json({
+            success: false,  
+            error: err.message
+        })
     }
 }
