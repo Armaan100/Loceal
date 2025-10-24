@@ -41,11 +41,6 @@ const productSchema = new mongoose.Schema({
     url: {
       type: String,
       required: true
-    },
-    alt: String,
-    isPrimary: {
-      type: Boolean,
-      default: false
     }
   }],
   stock: {
@@ -54,33 +49,9 @@ const productSchema = new mongoose.Schema({
     min: 0,
     default: 0
   },
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      required: true
-    },
-    address: {
-      street: String,
-      city: String,
-      state: String,
-      pincode: String
-    }
-  },
   isAvailable: {
     type: Boolean,
     default: true
-  },
-  isOrganic: {
-    type: Boolean,
-    default: false
-  },
-  harvestDate: {
-    type: Date
   },
   expiryDate: {
     type: Date
@@ -109,25 +80,14 @@ const productSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  isApproved: {
-    type: Boolean,
-    default: true
-  },
-  approvedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Admin'
-  },
-  approvedAt: {
-    type: Date
-  }
 }, {
   timestamps: true
 });
 
-productSchema.index({ location: '2dsphere' });
+//productSchema.index({ location: '2dsphere' });
 productSchema.index({ seller: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ isAvailable: 1, isApproved: 1 });
 productSchema.index({ createdAt: -1 });
 
-const Product = mongoose.model('Product', productSchema);
+module.exports = mongoose.model('Product', productSchema);

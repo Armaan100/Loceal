@@ -4,6 +4,7 @@ const router = express.Router();
 const body = require("express-validator");
 
 const adminController = require("../controllers/admin.controllers");
+const {authAdmin} = require("../middlewares/auth.middleware");
 
 router.post("/register", adminController.Register);
 router.post("/login", adminController.Login);

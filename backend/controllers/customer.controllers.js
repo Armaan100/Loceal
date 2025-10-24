@@ -1,4 +1,6 @@
 const CustomerModel = require("../models/customer.model");
+const ProductModel = require("../models/product.model");
+
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../libs/nodemailer");
 const fs = require("fs");
@@ -230,4 +232,28 @@ module.exports.Logout = async (req, res) => {
     res.status(200).json({
         message: "Customer logged out successfully"
     })
+}
+
+module.exports.GetProducts = async (req, res) => {
+    try{
+        const {lat, lng, maxDistance=50} = req.query;
+
+        // validating coordinates
+        if(!lat || !lng){
+            return res.status(400).json({
+                message: "Latitude and Longitude are required"
+            });
+        }
+
+        const customerCoordinates = [parseFloat(lng), parseFloat(lat)];
+
+        // geo spatial query - within specified radius
+        const products = await ProductModel.aggregate([
+            {
+                
+            }
+        ])
+    }catch(err){
+
+    }
 }

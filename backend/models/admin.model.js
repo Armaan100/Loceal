@@ -44,4 +44,4 @@ AdminSchema.methods.comparePassword = async function(enteredPassword){
 }
 
 
-module.exports = mongoose.model("Seller", AdminSchema);
+module.exports = mongoose.model("Admin", AdminSchema);
