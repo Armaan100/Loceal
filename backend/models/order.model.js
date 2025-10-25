@@ -40,23 +40,31 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    paymentMethod: { // Added this field for clarity, defaulting to 'cod'
-        type: String,
-        enum: ["online", "cod"],
-        default: "cod"
-    },
     paymentStatus: {
         type: String,
-        default: "pending", // Changed to lowercase
-        enum: ["pending", "completed", "failed", "refunded", "cod"] // Added 'cod' for COD payments
+        enum: ["pending", "completed", "failed", "cod_pending", "cod_completed"],
+        default: "cod_pending"
     },
-    paymentId: {
+    paymentMethod: {
         type: String,
-        default: null
+        enum: ["cash", "electronic", "upi", "card"],
+        default: "cash"
     },
+    paymentConfirmedBy: {
+        userType: {
+            type: String,
+            enum: ["customer", "seller", "admin", null],
+            default: null
+        },
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            refPath: 'paymentConfirmedBy.userType'
+        },
+        confirmedAt: Date
+    }, // ← THIS COMMA WAS MISSING
     orderStatus: {
         type: String,
-        default: "pending", // Changed to lowercase
+        default: "pending",
         enum: ["pending", "confirmed", "meeting_scheduled", "completed", "cancelled", "disputed"]
     },
     statusHistory: [{
