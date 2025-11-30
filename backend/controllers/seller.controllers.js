@@ -11,7 +11,10 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { getCoordinatesFromAddress } = require("../libs/geocoding");
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+// Remove trailing slash from FRONTEND_URL if present
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://loceal.netlify.app').replace(/\/$/, '');
+console.log('[SELLER] FRONTEND_URL:', FRONTEND_URL);
 
 module.exports.Register = async (req, res) => {
     try {
@@ -70,13 +73,15 @@ module.exports.Register = async (req, res) => {
         });
 
         await seller.save();
+        console.log('[SELLER REGISTER] ✅ Seller saved to database:', seller._id);
 
         const token = seller.generateAuthToken();
         res.cookie("token", token);
 
-        
+        console.log('[SELLER REGISTER] 📧 Attempting to send verification email to:', email);
+        console.log('[SELLER REGISTER] Verification URL:', `${FRONTEND_URL}/seller/verifySeller/${token}`);
 
-        await sendEmail(email, "Welcome To Loceal, Verify Yourself",
+        const emailSent = await sendEmail(email, "Welcome To Loceal, Verify Yourself",
             `  
             <html>
 <head>
@@ -173,10 +178,17 @@ module.exports.Register = async (req, res) => {
             `
         );
 
+        if (emailSent) {
+            console.log('[SELLER REGISTER] ✅ Verification email sent successfully');
+        } else {
+            console.log('[SELLER REGISTER] ⚠️ Email sending failed but registration completed');
+        }
+
         res.status(201).json({
             message: "Seller registered successfully",
             seller,
-            token
+            token,
+            emailSent: emailSent
         })
     } catch (err) {
         return res.status(500).json({

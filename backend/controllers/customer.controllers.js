@@ -14,7 +14,10 @@ const { getCoordinatesFromAddress } = require("../libs/geocoding");
 const { default: mongoose } = require("mongoose");
 const { createTransport } = require("nodemailer");
 const orderModel = require("../models/order.model");
-const FRONTEND_URL = process.env.FRONTEND_URL || `https://loceal.onrender.com`;
+
+// Remove trailing slash from FRONTEND_URL if present
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://loceal.netlify.app').replace(/\/$/, '');
+console.log('[CUSTOMER] FRONTEND_URL:', FRONTEND_URL);
 
 module.exports.Register = async (req, res) => {
     try {
@@ -74,14 +77,18 @@ module.exports.Register = async (req, res) => {
             isVerified: false, // eitu MVP r krne
         });
 
-        console.log(customer)
+        console.log('[CUSTOMER REGISTER] Customer object created:', customer._id);
 
         await customer.save();
+        console.log('[CUSTOMER REGISTER] ✅ Customer saved to database');
 
         const token = customer.generateAuthToken();
         res.cookie("token", token);
 
-        await sendEmail(email, "Welcome To Loceal, Verify Yourself",
+        console.log('[CUSTOMER REGISTER] 📧 Attempting to send verification email to:', email);
+        console.log('[CUSTOMER REGISTER] Verification URL:', `${FRONTEND_URL}/customer/verifyCustomer/${token}`);
+
+        const emailSent = await sendEmail(email, "Welcome To Loceal, Verify Yourself",
             `
             <html>
 <head>
@@ -178,10 +185,17 @@ module.exports.Register = async (req, res) => {
             `
         );
 
+        if (emailSent) {
+            console.log('[CUSTOMER REGISTER] ✅ Verification email sent successfully');
+        } else {
+            console.log('[CUSTOMER REGISTER] ⚠️ Email sending failed but registration completed');
+        }
+
         res.status(201).json({
             message: "Customer registered successfully",
             customer,
-            token
+            token,
+            emailSent: emailSent
         })
     } catch (err) {
         res.status(500).json({
