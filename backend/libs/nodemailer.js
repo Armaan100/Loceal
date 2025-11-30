@@ -4,12 +4,16 @@ const axios = require('axios');
 console.log('[NODEMAILER] Initializing email service...');
 console.log('[NODEMAILER] EMAIL_USER:', process.env.EMAIL_USER ? '✅ Set' : '❌ NOT SET');
 console.log('[NODEMAILER] EMAIL_PASS:', process.env.EMAIL_PASS ? '✅ Set (hidden)' : '❌ NOT SET');
-console.log('[NODEMAILER] RESEND_API_KEY:', process.env.RESEND_API_KEY ? '✅ Set (hidden)' : '⚠️ NOT SET (will use SMTP)');
+console.log('[NODEMAILER] EMAILJS_SERVICE_ID:', process.env.EMAILJS_SERVICE_ID ? '✅ Set' : '⚠️ NOT SET');
+console.log('[NODEMAILER] EMAILJS_PUBLIC_KEY:', process.env.EMAILJS_PUBLIC_KEY ? '✅ Set' : '⚠️ NOT SET');
+console.log('[NODEMAILER] EMAILJS_PRIVATE_KEY:', process.env.EMAILJS_PRIVATE_KEY ? '✅ Set (hidden)' : '⚠️ NOT SET');
 
-// Check if Resend API key is available (recommended for Render)
-const useResend = !!process.env.RESEND_API_KEY;
+// EmailJS - 200 emails/month FREE, NO business verification!
+const useEmailJS = !!(process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_PUBLIC_KEY);
 
-// Create nodemailer transporter as fallback
+console.log(`[NODEMAILER] Using: ${useEmailJS ? 'EmailJS API' : 'Gmail SMTP'}`);
+
+// Create nodemailer transporter for Gmail SMTP fallback
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -30,35 +34,49 @@ const createTransporter = () => {
 };
 
 let transporter = null;
-if (!useResend) {
+if (!useEmailJS) {
   transporter = createTransporter();
   transporter.verify()
     .then(() => console.log('[NODEMAILER] ✅ SMTP transporter ready'))
     .catch((err) => console.error('[NODEMAILER] ⚠️ SMTP verification failed:', err.message));
 }
 
-// Send email using Resend API (works on Render free tier!)
-async function sendWithResend(to, subject, html) {
+// Send email using EmailJS API (200 emails/month FREE - no verification!)
+// Template should have: {{to_email}}, {{subject}}, {{message_html}}
+async function sendWithEmailJS(to, subject, html) {
   try {
-    console.log('[RESEND] Sending email via Resend API...');
-    const response = await axios.post('https://api.resend.com/emails', {
-      from: 'Loceal <onboarding@resend.dev>', // Use resend.dev domain for free tier
-      to: [to],
-      subject: subject,
-      html: html,
-    }, {
+    console.log('[EMAILJS] Sending email via EmailJS API...');
+    
+    const data = {
+      service_id: process.env.EMAILJS_SERVICE_ID,
+      template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_loceal',
+      user_id: process.env.EMAILJS_PUBLIC_KEY,
+      template_params: {
+        to_email: to,
+        reply_to: process.env.EMAIL_USER || 'noreply@loceal.app',
+        from_name: 'Loceal',
+        subject: subject,
+        message_html: html
+      }
+    };
+
+    // Add private key if available (for server-side auth)
+    if (process.env.EMAILJS_PRIVATE_KEY) {
+      data.accessToken = process.env.EMAILJS_PRIVATE_KEY;
+    }
+    
+    const response = await axios.post('https://api.emailjs.com/api/v1.0/email/send', data, {
       headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'origin': 'https://loceal.netlify.app'
       },
       timeout: 30000
     });
     
-    console.log('[RESEND] ✅ Email sent successfully!');
-    console.log('[RESEND] ID:', response.data.id);
+    console.log('[EMAILJS] ✅ Email sent successfully!');
     return true;
   } catch (error) {
-    console.error('[RESEND] ❌ Failed:', error.response?.data || error.message);
+    console.error('[EMAILJS] ❌ Failed:', error.response?.data || error.message);
     return false;
   }
 }
@@ -85,16 +103,16 @@ async function sendWithSMTP(to, subject, html) {
 async function sendEmail(to, subject, html, retries = 3) {
   console.log(`[EMAIL] 📧 Sending to: ${to}`);
   console.log(`[EMAIL] Subject: ${subject}`);
-  console.log(`[EMAIL] Method: ${useResend ? 'Resend API' : 'Gmail SMTP'}`);
+  console.log(`[EMAIL] Method: ${useEmailJS ? 'EmailJS' : 'Gmail SMTP'}`);
   
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       console.log(`[EMAIL] Attempt ${attempt}/${retries}...`);
       
-      if (useResend) {
-        const success = await sendWithResend(to, subject, html);
+      if (useEmailJS) {
+        const success = await sendWithEmailJS(to, subject, html);
         if (success) return true;
-        throw new Error('Resend API failed');
+        throw new Error('EmailJS API failed');
       } else {
         const success = await sendWithSMTP(to, subject, html);
         if (success) return true;
@@ -103,13 +121,11 @@ async function sendEmail(to, subject, html, retries = 3) {
       console.error(`[EMAIL] ❌ Attempt ${attempt} failed:`, error.message);
       
       if (attempt < retries) {
-        const waitTime = attempt * 5000;
+        const waitTime = attempt * 3000;
         console.log(`[EMAIL] Waiting ${waitTime/1000}s before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       } else {
         console.error('[EMAIL] ❌ All attempts failed!');
-        console.error('[EMAIL] 💡 TIP: Set RESEND_API_KEY env var for reliable email on Render.');
-        console.error('[EMAIL] 💡 Get free API key at: https://resend.com');
         return false;
       }
     }
