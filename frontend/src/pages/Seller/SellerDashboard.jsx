@@ -36,18 +36,20 @@ const SellerDashboard = () => {
 
       // Calculate stats
       const activeOrders = orders.filter(order => 
-        ['pending', 'confirmed', 'meeting_scheduled', 'ready_for_pickup'].includes(order.orderStatus)
+        ['pending', 'meeting_scheduled'].includes(order.orderStatus)
       ).length;
 
       const totalRevenue = orders
         .filter(order => order.orderStatus === 'completed')
         .reduce((sum, order) => sum + order.totalAmount, 0);
 
+      const totalSalesCount = orders.filter(order => order.orderStatus === 'completed').length;
+
       setStats({
         totalProducts: products.length,
         activeOrders,
         totalRevenue,
-        totalSales: user.totalSales || 0
+        totalSales: totalSalesCount
       });
 
       setRecentOrders(orders.slice(0, 5));

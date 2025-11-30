@@ -912,17 +912,27 @@ module.exports.CreateOrder = async (req, res) => {
 // In customer.controller.js - Fix GetActiveOrders function
 module.exports.GetActiveOrders = async (req, res) => {
     try {
+        if (!req.customer) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
         const customerId = req.customer._id;
+        console.log(`GetActiveOrders called for customerId=${customerId}`);
+
+        if (!mongoose.Types.ObjectId.isValid(customerId)) {
+            console.error('Invalid customerId:', customerId);
+            return res.status(400).json({ success: false, message: 'Invalid customer id' });
+        }
 
         const activeOrders = await OrderModel.find({
             customer: customerId,
-            orderStatus: { $in: ["pending", "confirmed", "meeting_scheduled"] }
+            orderStatus: { $in: ["pending", "meeting_scheduled"] }
         })
-        .populate('seller', 'businessName phone')
-        .populate('product', 'title images price unit')
-        .populate('chatRoom')
-        .sort({ createdAt: -1 });
+            .populate('seller', 'businessName phone')
+            .populate('product', 'title images price unit')
+            .populate('chatRoom')
+            .sort({ createdAt: -1 });
 
+        console.log(`Active orders found: ${activeOrders.length}`);
         res.status(200).json({
             success: true,
             orders: activeOrders,
@@ -930,7 +940,10 @@ module.exports.GetActiveOrders = async (req, res) => {
             message: "Active orders retrieved successfully"
         });
     } catch (err) {
-        console.error('Error fetching active orders:', err);
+        console.error('Error fetching active orders:', err && err.stack ? err.stack : err, 'name:', err.name, 'message:', err.message);
+        if (err.name === 'CastError') {
+            return res.status(400).json({ success: false, error: 'Invalid id format' });
+        }
         res.status(500).json({
             success: false,
             error: err.message
@@ -941,7 +954,21 @@ module.exports.GetActiveOrders = async (req, res) => {
 // Get Completed Orders (for review/report)
 module.exports.GetCompletedOrders = async (req, res) => {
     try {
+        console.log("Coming Here")
+        if (!req.customer) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
         const customerId = req.customer._id;
+        console.log(`GetCompletedOrders called for customerId=${customerId}`);
+
+        if (!mongoose.Types.ObjectId.isValid(customerId)) {
+            console.error('Invalid customerId:', customerId);
+            return res.status(400).json({ success: false, message: 'Invalid customer id' });
+        }
+
+        // Log raw query result first (lean) to surface any cast/populate issues
+        const rawOrders = await OrderModel.find({ customer: customerId, orderStatus: 'completed' }).lean().exec();
+        console.log('Raw completed orders count:', (rawOrders && rawOrders.length) || 0);
 
         const completedOrders = await OrderModel.find({
             customer: customerId,
@@ -951,6 +978,7 @@ module.exports.GetCompletedOrders = async (req, res) => {
             .populate('product', 'title images')
             .sort({ createdAt: -1 });
 
+        console.log(`Completed orders found: ${completedOrders.length}`);
         res.status(200).json({
             success: true,
             orders: completedOrders,
@@ -958,6 +986,10 @@ module.exports.GetCompletedOrders = async (req, res) => {
             message: "Completed orders retrieved successfully"
         });
     } catch (err) {
+        console.error('Error fetching completed orders:', err && err.stack ? err.stack : err, 'name:', err.name, 'message:', err.message);
+        if (err.name === 'CastError') {
+            return res.status(400).json({ success: false, error: 'Invalid id format' });
+        }
         res.status(500).json({
             success: false,
             error: err.message
@@ -971,6 +1003,10 @@ exports.GetOrderWithChat = async (req, res) => {
     try {
         const { orderId } = req.params;
         const customerId = req.customer._id;
+        // Validate orderId to avoid CastError
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({ success: false, message: 'Invalid order id' });
+        }
 
         const order = await OrderModel.findOne({
             _id: orderId,
@@ -1022,7 +1058,7 @@ module.exports.CancelOrder = async (req, res) => {
         }
 
         // Only allow cancellation for pending orders
-        if (!["pending", "confirmed"].includes(order.orderStatus)) {
+        if (!["pending"].includes(order.orderStatus)) {
             return res.status(400).json({
                 success: false,
                 message: "Cannot cancel order in current status"
@@ -1070,8 +1106,23 @@ module.exports.GetTransactionOTP = async (req, res) => {
             });
         }
 
-        // TODO: Implement OTP verification logic
-        // For now, just complete the order
+        // Prevent double-completion
+        if (order.orderStatus === 'completed') {
+            return res.status(400).json({ success: false, message: 'Order is already completed' });
+        }
+
+        // Basic OTP verification placeholder: if OTP provided do basic check when present
+        if (order.otpVerification && order.otpVerification.code) {
+            // if otp in body and mismatch, reject
+            if (otp && String(otp).trim() !== String(order.otpVerification.code)) {
+                // increment attempts if field exists
+                order.otpVerification.attempts = (order.otpVerification.attempts || 0) + 1;
+                await order.save();
+                return res.status(400).json({ success: false, message: 'Invalid OTP' });
+            }
+        }
+
+        // Mark order as completed
         order.orderStatus = "completed";
         order.paymentStatus = "cod_completed";
         order.paymentConfirmedBy = {
@@ -1080,7 +1131,35 @@ module.exports.GetTransactionOTP = async (req, res) => {
             confirmedAt: new Date()
         };
 
+        order.statusHistory = order.statusHistory || [];
+        order.statusHistory.push({ status: 'completed', timestamp: new Date(), note: 'Customer verified payment/OTP' });
+
         await order.save();
+
+        // Update seller stats so dashboard reflects completed orders
+        try {
+            await SellerModel.findByIdAndUpdate(order.seller, {
+                $inc: {
+                    totalSales: 1,
+                    totalOrders: 1,
+                    totalRevenue: order.totalAmount
+                }
+            });
+        } catch (errUpdate) {
+            console.error('Failed to update seller stats after customer-complete:', errUpdate);
+        }
+
+        // Update product sales and reduce stock
+        try {
+            await ProductModel.findByIdAndUpdate(order.product, {
+                $inc: {
+                    totalSales: order.quantity,
+                    stock: -order.quantity
+                }
+            });
+        } catch (errProd) {
+            console.error('Failed to update product sales after customer-complete:', errProd);
+        }
 
         res.status(200).json({
             success: true,

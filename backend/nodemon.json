@@ -1,0 +1,20 @@
+{
+  "watch": [
+    "controllers",
+    "models",
+    "routes",
+    "app.js",
+    "server.js",
+    "db"
+  ],
+  "ignore": [
+    "frontend/*",
+    "public/*",
+    "logs/*",
+    "*.log",
+    "node_modules/*",
+    ".git/*",
+    "**/*.test.js"
+  ],
+  "delay": "250"
+}

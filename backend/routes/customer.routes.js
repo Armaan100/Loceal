@@ -6,6 +6,23 @@ const body = require("express-validator");
 const customerController = require("../controllers/customer.controllers");
 const {authCustomer} = require("../middlewares/auth.middleware");
 
+// Log requests that reach the customer router
+router.use((req, res, next) => {
+	try {
+		console.log('[customer.routes] incoming', req.method, req.path);
+	} catch (e) {
+		console.log('[customer.routes] logger error', e && e.message);
+	}
+	next();
+});
+
+// Log controller exports types for debugging
+try {
+	console.log('[customer.routes] controller types:', 'GetActiveOrders=', typeof customerController.GetActiveOrders, 'GetCompletedOrders=', typeof customerController.GetCompletedOrders);
+} catch (e) {
+	console.log('[customer.routes] controller type check error', e && e.message);
+}
+
 
 router.post("/register", customerController.Register);
 router.get("/verifyCustomer/:token", customerController.VerifyCustomer);   
@@ -37,14 +54,15 @@ router.delete("/cart/clear", authCustomer, customerController.ClearCart);
 router.post("/orders", authCustomer, customerController.CreateOrder); 
 // Pending/active orders
 router.get("/orders/active", authCustomer, customerController.GetActiveOrders); 
+
+// Have to implement this
+router.get("/orders/completed", authCustomer, customerController.GetCompletedOrders);
+
 // Get Single Order Details with Chat
 router.get("/orders/:orderId", authCustomer, customerController.GetOrderWithChat); 
 
 // Cancel order
 router.put("/orders/:orderId/cancel", authCustomer, customerController.CancelOrder);
-
-// Have to implement this
-router.get("/orders/completed", authCustomer, customerController.GetCompletedOrders);
 
 
 

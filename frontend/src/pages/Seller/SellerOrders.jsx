@@ -17,12 +17,13 @@ const SellerOrders = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [filter]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await sellerAPI.getOrders();
+      const params = filter && filter !== 'all' ? { status: filter } : {};
+      const response = await sellerAPI.getOrders(params);
       setOrders(response.data.orders || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -100,17 +101,16 @@ const SellerOrders = () => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       case 'completed':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
-
   const canGenerateOTP = (orderStatus) => {
-    return ["pending", "confirmed"].includes(orderStatus);
+    return ["pending"].includes(orderStatus);
   };
 
   const hasOTPGenerated = (order) => {
@@ -144,6 +144,11 @@ const SellerOrders = () => {
               <p className="text-gray-600">
                 Manage customer orders and complete transactions with OTP
               </p>
+              <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-100 text-sm text-yellow-800">
+                If you need to report an issue or dispute an order, please email us at&nbsp;
+                <a href="mailto:team.loceal@gmail.com" className="underline font-medium">team.loceal@gmail.com</a>
+                &nbsp;and our support team will assist you.
+              </div>
             </div>
 
             <div className="flex items-center space-x-3">
@@ -155,7 +160,7 @@ const SellerOrders = () => {
               >
                 <option value="all">All Orders</option>
                 <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
+                <option value="cancelled">Cancelled</option>
                 <option value="completed">Completed</option>
               </select>
             </div>

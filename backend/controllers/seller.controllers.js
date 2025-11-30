@@ -606,19 +606,19 @@ module.exports.InitiatePayment = async (req, res) => {
         // Generate OTP (6-digit)
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Store OTP in order
-        order.otp = {
+        // Store OTP in order under otpVerification (align with GenerateOTP)
+        order.otpVerification = {
             code: otp,
             expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
             verified: false,
             initiatedBy: sellerId,
-            initiatedAt: new Date()
+            generatedAt: new Date(),
+            attempts: 0
         };
 
-        // Update order status
-        order.orderStatus = "ready_for_pickup";
+        // Do NOT change order status here (we don't use `ready_for_pickup`)
         order.statusHistory.push({
-            status: "ready_for_pickup",
+            status: order.orderStatus,
             timestamp: new Date(),
             note: "Payment initiated - OTP sent to customer"
         });
@@ -915,19 +915,19 @@ module.exports.GetOrders = async (req, res) => {
         const sellerId = req.seller._id;
         console.log(sellerId)
 
-        // // Filter by status if provided
-        // if (status && status !== 'all') {
-        //     query.orderStatus = status;
-        // }
+        // Allow filtering by status via query param `status`. Example: ?status=pending
+        const { status = 'all' } = req.query;
 
-        // console.log("Yo")
-        
-        const orders = await OrderModel.find({ seller: sellerId, orderStatus: "pending" })
-        // .populate('customers', 'name phone defaultAddress')
-        // .populate('products', 'title images price')
-        // .sort({ createdAt: -1 });
+        const query = { seller: sellerId };
+        if (status && status !== 'all') {
+            query.orderStatus = status;
+        }
 
-        console.log("Yo")
+        const orders = await OrderModel.find(query)
+            .populate('customer', 'name phone defaultAddress')
+            .populate('product', 'title images price')
+            .sort({ createdAt: -1 });
+
         res.status(200).json({
             success: true,
             orders,
@@ -1002,10 +1002,8 @@ module.exports.UpdateOrderStatus = async (req, res) => {
 
         // Validate status transition
         const validTransitions = {
-            'pending': ['confirmed', 'cancelled'],
-            'confirmed': ['meeting_scheduled', 'cancelled'],
-            'meeting_scheduled': ['ready_for_pickup', 'cancelled'],
-            'ready_for_pickup': ['completed'] // OTP flow handles this
+            'pending': ['meeting_scheduled', 'cancelled'],
+            'meeting_scheduled': ['completed', 'cancelled']
         };
 
         if (!validTransitions[order.orderStatus]?.includes(status)) {

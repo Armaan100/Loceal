@@ -27,8 +27,7 @@ import CustomerDashboard from './pages/Customer/CustomerDashboard';
 import ProductList from './pages/Customer/ProductList';
 import ProductDetails from './pages/Customer/ProductDetails';
 import Cart from './pages/Customer/Cart';
-import ActiveOrders from './pages/Customer/ActiveOrders';
-import CompletedOrders from './pages/Customer/CompletedOrders';
+import Orders from './pages/Customer/Orders';
 import Chat from './pages/Customer/Chat';
 
 // Seller Pages
@@ -105,7 +104,7 @@ function App() {
                   path="/customer/orders/active" 
                   element={
                     <ProtectedRoute>
-                      <ActiveOrders />
+                      <Orders />
                     </ProtectedRoute>
                   } 
                 />
@@ -113,9 +112,17 @@ function App() {
                   path="/customer/orders/completed" 
                   element={
                     <ProtectedRoute>
-                      <CompletedOrders />
+                      <Orders />
                     </ProtectedRoute>
                   } 
+                />
+                <Route
+                  path="/customer/orders"
+                  element={
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route 
                   path="/customer/chat/:orderId" 

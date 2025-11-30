@@ -80,6 +80,18 @@ export const orderAPI = {
   verifyOTP: (id, otp) => api.post(`/customer/orders/${id}/verify-otp`, { otp }),
 };
 
+// Reviews API (mounted under /api/reviews)
+export const reviewAPI = {
+  // Submit a review for an order (customer)
+  submitReview: (orderId, data) => api.post(`/api/reviews/orders/${orderId}/review`, data),
+  // Get reviews for a product (public)
+  getProductReviews: (productId) => api.get(`/api/reviews/products/${productId}/reviews`),
+  // Get reviews for a seller
+  getSellerReviews: (sellerId) => api.get(`/api/reviews/sellers/${sellerId}/reviews`),
+  // Seller respond to a review
+  respondToReview: (reviewId, data) => api.post(`/api/reviews/reviews/${reviewId}/response`, data),
+};
+
 export const sellerAPI = {
   getProducts: () => api.get('/seller/products'),
   getProduct: (id) => api.get(`/seller/products/${id}`),

@@ -65,7 +65,7 @@ const orderSchema = new mongoose.Schema({
     orderStatus: {
         type: String,
         default: "pending",
-        enum: ["pending", "confirmed", "completed", "cancelled", "disputed"]
+        enum: ["pending", "completed", "cancelled", "disputed"]
     },
     statusHistory: [{
         status: {
@@ -115,6 +115,14 @@ const orderSchema = new mongoose.Schema({
         generatedAt: Date,
         verified: { type: Boolean, default: false },
         attempts: { type: Number, default: 0 }
+    }
+    ,
+    // Review linkage: mark if order has been reviewed and reference the review
+    reviewed: { type: Boolean, default: false },
+    review: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Review',
+        default: null
     }
 }, { timestamps: true });
 

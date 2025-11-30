@@ -6,8 +6,12 @@ const jwt = require("jsonwebtoken");
 
 module.exports.authCustomer = async (req, res, next) => {
     try{
-        const token = req.cookies.token || req.headers.authorization.split(' ')[1]; // milam frontend r lgt jetia bonam
-        
+        const authHeader = req.headers && req.headers.authorization;
+        const tokenFromHeader = authHeader && typeof authHeader === 'string' ? authHeader.split(' ')[1] : null;
+        const token = req.cookies?.token || tokenFromHeader;
+
+        console.log('[authCustomer] authHeader present:', !!authHeader, 'cookie token present:', !!req.cookies?.token, 'tokenFromHeader present:', !!tokenFromHeader);
+
         if(!token){
             return res.status(401).json({
                 message: "Unauthorized"
@@ -39,7 +43,7 @@ module.exports.authCustomer = async (req, res, next) => {
         req.customer = customer;
         next();
     }catch(err){
-        return res.status(500).json({
+        return res.status(401).json({
             message: err.message
         })
     }
@@ -49,8 +53,12 @@ module.exports.authCustomer = async (req, res, next) => {
 
 module.exports.authSeller = async (req, res, next) => {
     try{
-        const token = req.cookies.token || req.headers.authorization.split(' ')[1]; // milam frontend r lgt jetia bonam
-        
+        const authHeader = req.headers && req.headers.authorization;
+        const tokenFromHeader = authHeader && typeof authHeader === 'string' ? authHeader.split(' ')[1] : null;
+        const token = req.cookies?.token || tokenFromHeader;
+
+        console.log('[authSeller] authHeader present:', !!authHeader, 'cookie token present:', !!req.cookies?.token, 'tokenFromHeader present:', !!tokenFromHeader);
+
         if(!token){
             return res.status(401).json({
                 message: "Unauthorized"
@@ -82,7 +90,7 @@ module.exports.authSeller = async (req, res, next) => {
         req.seller = seller;
         next();
     }catch(err){
-        return res.status(500).json({
+        return res.status(401).json({
             message: err.message
         })
     }
@@ -92,8 +100,12 @@ module.exports.authSeller = async (req, res, next) => {
 
 module.exports.authAdmin = async (req, res, next) => {
     try{
-        const token = req.cookies.token || req.headers.authorization.split(' ')[1]; // milam frontend r lgt jetia bonam
-        
+        const authHeader = req.headers && req.headers.authorization;
+        const tokenFromHeader = authHeader && typeof authHeader === 'string' ? authHeader.split(' ')[1] : null;
+        const token = req.cookies?.token || tokenFromHeader;
+
+        console.log('[authAdmin] authHeader present:', !!authHeader, 'cookie token present:', !!req.cookies?.token, 'tokenFromHeader present:', !!tokenFromHeader);
+
         if(!token){
             return res.status(401).json({
                 message: "Unauthorized"
@@ -119,8 +131,8 @@ module.exports.authAdmin = async (req, res, next) => {
         req.admin = admin;
         next();
     }catch(err){
-        return res.status(500).json({
-            message: err.message
+        return res.status(401).json({
+                message: err.message
         })
     }
 }

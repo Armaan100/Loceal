@@ -1,7 +1,7 @@
 // src/pages/Customer/CompletedOrders.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { orderAPI } from '../../lib/api';
+import { orderAPI, reviewAPI } from '../../lib/api';
 import { Package, Star, MessageCircle, CheckCircle } from 'lucide-react';
 
 const CompletedOrders = () => {
@@ -9,6 +9,11 @@ const CompletedOrders = () => {
   
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     fetchCompletedOrders();
@@ -27,12 +32,37 @@ const CompletedOrders = () => {
   };
 
   const handleRateSeller = (orderId) => {
-    // Navigate to rating page or open rating modal
-    alert('Rating feature will be implemented soon!');
+    const order = orders.find(o => o._id === orderId);
+    setSelectedOrder(order);
+    setRating(5);
+    setComment('');
+    setShowReviewModal(true);
   };
 
   const handleChat = (orderId) => {
     navigate(`/customer/chat/${orderId}`);
+  };
+
+  const handleStarClick = (value) => {
+    setRating(value);
+  };
+
+  const submitReview = async () => {
+    if (!selectedOrder) return;
+    try {
+      setSubmittingReview(true);
+      await reviewAPI.submitReview(selectedOrder._id, { rating, comment });
+      setShowReviewModal(false);
+      setSelectedOrder(null);
+      setComment('');
+      // refresh orders to reflect review status if needed
+      await fetchCompletedOrders();
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      alert(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   if (loading) {
@@ -62,6 +92,34 @@ const CompletedOrders = () => {
               <CheckCircle className="w-5 h-5" />
               <span className="font-semibold">{orders.length} completed orders</span>
             </div>
+            {/* Review Modal */}
+            {showReviewModal && selectedOrder && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black opacity-40" onClick={() => setShowReviewModal(false)} />
+                <div className="relative bg-white rounded-xl shadow-lg w-full max-w-md p-6 z-10">
+                  <h3 className="text-lg font-semibold mb-2">Rate your experience</h3>
+                  <p className="text-sm text-gray-600 mb-4">Seller: <strong>{selectedOrder.seller.businessName}</strong></p>
+
+                  <div className="flex items-center space-x-2 mb-4">
+                    {[1,2,3,4,5].map((s) => (
+                      <button key={s} onClick={() => handleStarClick(s)} className={`p-2 rounded-md ${s <= rating ? 'bg-yellow-400 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                        <Star className="w-5 h-5" />
+                      </button>
+                    ))}
+                    <span className="ml-3 text-sm text-gray-700">{rating} / 5</span>
+                  </div>
+
+                  <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Write a short review (optional)" className="w-full border rounded-md p-2 text-sm mb-4" rows={4} />
+
+                  <div className="flex justify-end space-x-2">
+                    <button onClick={() => { setShowReviewModal(false); setSelectedOrder(null); }} className="px-4 py-2 rounded-md border">Cancel</button>
+                    <button onClick={submitReview} disabled={submittingReview} className="px-4 py-2 rounded-md btn-primary">
+                      {submittingReview ? 'Submitting...' : 'Submit Review'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -160,12 +218,9 @@ const CompletedOrders = () => {
                       </button>
 
                       {/* Report Issue */}
-                      <button
-                        onClick={() => alert('Report feature coming soon!')}
-                        className="w-full border border-red-300 text-red-600 hover:bg-red-50 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
-                      >
+                      <a href="mailto:team.loceal@gmail.com" className="w-full border border-red-300 text-red-600 hover:bg-red-50 py-2 px-4 rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center">
                         Report Issue
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -185,6 +240,7 @@ const CompletedOrders = () => {
             >
               Browse Products
             </button>
+            
           </div>
         )}
       </div>

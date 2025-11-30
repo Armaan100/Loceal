@@ -6,9 +6,9 @@ const MONGODB_URI = process.env.MONGO_URI;
 
 const adminData = {
   name: "Admin User",
-  email: "admin@loceal.com",
-  password: "admin123", // Change this to your desired password
-  phone: "1234567890"
+  email: "team.loceal@gmail.com",
+  password: "admin@12345", 
+  phone: "8453391908"
 };
 
 async function createAdmin() {

@@ -237,7 +237,7 @@ const SellerChat = () => {
                   </button>
                 )}
 
-                {order.orderStatus === 'ready_for_pickup' && !showOTPInput && (
+                {order.otpVerification && order.otpVerification.code && !order.otpVerification.verified && !showOTPInput && (
                   <button
                     onClick={() => setShowOTPInput(true)}
                     className="btn-primary flex items-center space-x-2 text-sm"

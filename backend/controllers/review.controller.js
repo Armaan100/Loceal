@@ -54,6 +54,16 @@ module.exports.submitReview = async (req, res) => {
 
         await review.save();
 
+        // Mark order as reviewed and attach review reference
+        try {
+            await OrderModel.findByIdAndUpdate(orderId, {
+                reviewed: true,
+                review: review._id
+            });
+        } catch (errUpdate) {
+            console.error('Failed to attach review to order:', errUpdate);
+        }
+
         // Update seller rating stats
         await updateSellerRating(order.seller);
 

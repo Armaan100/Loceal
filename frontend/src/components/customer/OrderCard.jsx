@@ -10,12 +10,8 @@ const OrderCard = ({ order, onCancel, onChat, showActions = true }) => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800';
       case 'meeting_scheduled':
         return 'bg-purple-100 text-purple-800';
-      case 'ready_for_pickup':
-        return 'bg-green-100 text-green-800';
       case 'completed':
         return 'bg-gray-100 text-gray-800';
       case 'cancelled':
@@ -31,8 +27,6 @@ const OrderCard = ({ order, onCancel, onChat, showActions = true }) => {
         return <CheckCircle className="w-4 h-4" />;
       case 'cancelled':
         return <XCircle className="w-4 h-4" />;
-      case 'ready_for_pickup':
-        return <Package className="w-4 h-4" />;
       default:
         return <Clock className="w-4 h-4" />;
     }
@@ -42,12 +36,8 @@ const OrderCard = ({ order, onCancel, onChat, showActions = true }) => {
     switch (status) {
       case 'pending':
         return 'Waiting for seller confirmation';
-      case 'confirmed':
-        return 'Order confirmed by seller';
       case 'meeting_scheduled':
         return 'Meeting scheduled';
-      case 'ready_for_pickup':
-        return 'Ready for pickup - OTP sent';
       case 'completed':
         return 'Order completed';
       case 'cancelled':
@@ -57,7 +47,7 @@ const OrderCard = ({ order, onCancel, onChat, showActions = true }) => {
     }
   };
 
-  const canCancel = ['pending', 'confirmed'].includes(order.orderStatus);
+  const canCancel = ['pending'].includes(order.orderStatus);
   const canChat = !['completed', 'cancelled'].includes(order.orderStatus);
 
   const handleChat = () => {
@@ -120,7 +110,7 @@ const OrderCard = ({ order, onCancel, onChat, showActions = true }) => {
         </div>
 
         {/* OTP Notice */}
-        {order.orderStatus === 'ready_for_pickup' && (
+        {order.otpVerification && order.otpVerification.code && !order.otpVerification.verified && (
           <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center space-x-2">
               <Package className="w-4 h-4 text-blue-600" />
