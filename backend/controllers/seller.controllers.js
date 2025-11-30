@@ -1332,8 +1332,12 @@ module.exports.VerifyOTP = async (req, res) => {
             });
         }
 
-        console.log("Stored OTP:", order.otpVerification.code);
-        console.log("Received OTP:", otp.otp);
+        // Handle both formats: { otp: "123456" } or just "123456"
+        const receivedOTP = typeof otp === 'object' ? otp.otp : otp;
+        
+        console.log("[VERIFY OTP] Stored OTP:", order.otpVerification.code);
+        console.log("[VERIFY OTP] Received OTP:", receivedOTP);
+        console.log("[VERIFY OTP] Raw otp param:", otp);
 
         // Check if OTP is already verified
         if (order.otpVerification.verified) {
@@ -1359,17 +1363,21 @@ module.exports.VerifyOTP = async (req, res) => {
             });
         }
 
-        // ✅ FIX: Remove .otp - Compare directly with code
-        if (order.otpVerification.code !== otp.otp) {
+        // Compare OTP - use normalized value
+        if (order.otpVerification.code !== receivedOTP) {
             // Increment attempts
             order.otpVerification.attempts += 1;
             await order.save();
+
+            console.log("[VERIFY OTP] ❌ OTP mismatch! Attempts:", order.otpVerification.attempts);
 
             return res.status(400).json({
                 success: false,
                 message: `Invalid OTP. ${3 - order.otpVerification.attempts} attempts remaining.`
             });
         }
+
+        console.log("[VERIFY OTP] ✅ OTP verified successfully!");
 
         // ✅ OTP VERIFIED - NOW CHANGE STATUS TO COMPLETED
         order.otpVerification.verified = true;
