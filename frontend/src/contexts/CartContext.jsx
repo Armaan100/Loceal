@@ -17,12 +17,32 @@ export const CartProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
 
   const fetchCart = async () => {
+    // Only fetch cart if user is logged in as a customer
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('userData');
+    
+    if (!token || !userData) {
+      setCart(null);
+      return;
+    }
+    
     try {
+      const parsedUserData = JSON.parse(userData);
+      // Only fetch cart for customer users, not sellers or admins
+      if (parsedUserData.userType !== 'customer') {
+        setCart(null);
+        return;
+      }
+      
       setLoading(true);
       const response = await cartAPI.getCart();
       setCart(response.data.cart);
     } catch (error) {
-      console.error('Error fetching cart:', error);
+      // Don't log 401 errors as they're expected for unauthenticated users
+      if (error.response?.status !== 401) {
+        console.error('Error fetching cart:', error);
+      }
+      setCart(null);
     } finally {
       setLoading(false);
     }
@@ -83,8 +103,24 @@ export const CartProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // Initial fetch
     fetchCart();
+    
+    // Listen for storage changes (login/logout from other tabs)
+    const handleStorageChange = (e) => {
+      if (e.key === 'token' || e.key === 'userData') {
+        fetchCart();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Clear cart when user logs out (cart becomes null)
+  const resetCart = () => {
+    setCart(null);
+  };
 
   const value = {
     cart,
@@ -94,6 +130,7 @@ export const CartProvider = ({ children }) => {
     updateCartItem,
     removeFromCart,
     clearCart,
+    resetCart,
     getCartTotal,
     getCartItemsCount
   };
