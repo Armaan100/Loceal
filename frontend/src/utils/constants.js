@@ -1,10 +1,13 @@
 // src/utils/constants.js
+const FALLBACK_API = import.meta.env.VITE_API_BASE_URL || 'https://loceal.onrender.com';
+const FALLBACK_SOCKET = import.meta.env.VITE_SOCKET_URL || FALLBACK_API;
+
 export const APP_CONFIG = {
   NAME: 'Loceal',
   DESCRIPTION: 'Local Marketplace - Connect with sellers in your area',
   VERSION: '1.0.0',
-  API_BASE_URL: 'http://localhost:3000',
-  SOCKET_URL: 'http://localhost:3000'
+  API_BASE_URL: FALLBACK_API,
+  SOCKET_URL: FALLBACK_SOCKET
 };
 
 export const ORDER_STATUS = {
@@ -195,6 +198,8 @@ export const DEFAULT_LOCATION = {
 
 export default {
   APP_CONFIG,
+  API_BASE_URL: APP_CONFIG.API_BASE_URL,
+  SOCKET_URL: APP_CONFIG.SOCKET_URL,
   ORDER_STATUS,
   PAYMENT_STATUS,
   USER_TYPES,

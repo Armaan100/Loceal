@@ -1,7 +1,8 @@
 // src/lib/socket.js
 import { io } from 'socket.io-client';
+import constants from '../utils/constants';
 
-const SOCKET_URL = 'http://localhost:3000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || constants.API_BASE_URL || 'https://loceal.onrender.com';
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
