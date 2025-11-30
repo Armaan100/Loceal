@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../../lib/api';
+import { useAuth } from '../../hooks/useAuth';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const AdminLogin = () => {
@@ -11,6 +12,14 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { user, userType, checkAuthStatus } = useAuth();
+
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (user && userType === 'admin') {
+      navigate('/admin/dashboard');
+    }
+  }, [user, userType, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -29,9 +38,14 @@ const AdminLogin = () => {
       const response = await authAPI.admin.login(formData);
 
       if (response.data.success) {
+        // Store admin tokens
         localStorage.setItem('adminToken', response.data.token);
         localStorage.setItem('adminData', JSON.stringify(response.data.admin));
         localStorage.setItem('userType', 'admin');
+        
+        // Re-check auth status to update context
+        await checkAuthStatus();
+        
         navigate('/admin/dashboard');
       }
     } catch (err) {

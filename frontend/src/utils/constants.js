@@ -1,6 +1,9 @@
 // src/utils/constants.js
-const FALLBACK_API = import.meta.env.VITE_API_BASE_URL || 'https://loceal.onrender.com';
-const FALLBACK_SOCKET = import.meta.env.VITE_SOCKET_URL || FALLBACK_API;
+// const FALLBACK_API = import.meta.env.VITE_API_BASE_URL || 'https://loceal.onrender.com';
+// const FALLBACK_SOCKET = import.meta.env.VITE_SOCKET_URL || FALLBACK_API;
+
+const FALLBACK_API = 'https://loceal.onrender.com';
+const FALLBACK_SOCKET = FALLBACK_API;
 
 export const APP_CONFIG = {
   NAME: 'Loceal',

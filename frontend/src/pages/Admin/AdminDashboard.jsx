@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../lib/api';
+import { useAuth } from '../../hooks/useAuth';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const AdminDashboard = () => {
@@ -9,24 +10,16 @@ const AdminDashboard = () => {
   const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [adminData, setAdminData] = useState(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     limit: 10
   });
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const admin = localStorage.getItem('adminData');
-    
-    if (!token || !admin) {
-      navigate('/admin/login');
-      return;
-    }
-    
-    setAdminData(JSON.parse(admin));
+    // Auth check is now handled by ProtectedRoute, just fetch data
     fetchData();
   }, [activeTab, pagination.currentPage]);
 
@@ -54,11 +47,7 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch data');
-      if (err.response?.status === 401) {
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminData');
-        navigate('/admin/login');
-      }
+      // Don't manually redirect here - let the api interceptor handle 401 errors
     } finally {
       setLoading(false);
     }
@@ -81,9 +70,7 @@ const AdminDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminData');
-    localStorage.removeItem('userType');
+    logout();
     navigate('/admin/login');
   };
 
@@ -97,7 +84,7 @@ const AdminDashboard = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Welcome, {adminData?.name}</p>
+              <p className="text-gray-600 mt-1">Welcome, {user?.name}</p>
             </div>
             <button
               onClick={handleLogout}

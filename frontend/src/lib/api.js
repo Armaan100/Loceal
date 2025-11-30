@@ -30,9 +30,29 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('userData');
-      window.location.href = '/';
+      // Check which type of user is logged in and clear appropriate tokens
+      const adminToken = localStorage.getItem('adminToken');
+      const regularToken = localStorage.getItem('token');
+      
+      if (adminToken) {
+        // Admin user - clear admin tokens and redirect to admin login
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminData');
+        localStorage.removeItem('userType');
+        // Only redirect if not already on admin login page to prevent loop
+        if (!window.location.pathname.includes('/admin/login')) {
+          window.location.href = '/admin/login';
+        }
+      } else if (regularToken) {
+        // Regular user - clear regular tokens and redirect to home
+        localStorage.removeItem('token');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('userType');
+        // Only redirect if not already on a login page to prevent loop
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/';
+        }
+      }
     }
     return Promise.reject(error);
   }
