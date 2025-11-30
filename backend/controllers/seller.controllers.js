@@ -11,7 +11,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { getCoordinatesFromAddress } = require("../libs/geocoding");
-const FRONTEND_URL = process.env.FRONTEND_URL || `https://loceal.onrender.com`;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 module.exports.Register = async (req, res) => {
     try {
@@ -73,6 +73,8 @@ module.exports.Register = async (req, res) => {
 
         const token = seller.generateAuthToken();
         res.cookie("token", token);
+
+        
 
         await sendEmail(email, "Welcome To Loceal, Verify Yourself",
             `  
