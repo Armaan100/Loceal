@@ -11,6 +11,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { getCoordinatesFromAddress } = require("../libs/geocoding");
+const { uploadToCloudinary, deleteFromCloudinary } = require("../libs/cloudinary");
 
 // Remove trailing slash from FRONTEND_URL if present
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://loceal.netlify.app').replace(/\/$/, '');
@@ -285,6 +286,82 @@ module.exports.GetProfile = async (req, res) => {
 }
 
 
+// Upload Images to Cloudinary
+module.exports.UploadImages = async (req, res) => {
+    try {
+        console.log('[UPLOAD IMAGES] Request files:', req.files);
+        
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No images provided"
+            });
+        }
+
+        // Files are already uploaded to Cloudinary via multer-storage-cloudinary
+        const uploadedImages = req.files.map(file => ({
+            url: file.path,
+            publicId: file.filename
+        }));
+
+        console.log('[UPLOAD IMAGES] ✅ Uploaded:', uploadedImages);
+
+        res.status(200).json({
+            success: true,
+            images: uploadedImages,
+            message: `${uploadedImages.length} image(s) uploaded successfully`
+        });
+
+    } catch (err) {
+        console.error('[UPLOAD IMAGES] Error:', err);
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+};
+
+
+// Delete Image from Cloudinary
+module.exports.DeleteImage = async (req, res) => {
+    try {
+        const { publicId } = req.body;
+
+        if (!publicId) {
+            return res.status(400).json({
+                success: false,
+                message: "Public ID is required"
+            });
+        }
+
+        console.log('[DELETE IMAGE] Deleting:', publicId);
+
+        const result = await deleteFromCloudinary(publicId);
+
+        if (result.result === 'ok') {
+            console.log('[DELETE IMAGE] ✅ Deleted:', publicId);
+            res.status(200).json({
+                success: true,
+                message: "Image deleted successfully"
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: "Failed to delete image",
+                result
+            });
+        }
+
+    } catch (err) {
+        console.error('[DELETE IMAGE] Error:', err);
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+};
+
+
 module.exports.GetProducts = async (req, res) => {
     try {
         const sellerId = req.seller._id;
@@ -339,7 +416,8 @@ module.exports.CreateProduct = async (req, res) => {
             minimumOrder = 1,
             stock,
             expiryDate,
-            tags = []
+            tags = [],
+            images = [] // Array of { url, publicId }
         } = req.body;
 
         // Basic validation
@@ -358,6 +436,16 @@ module.exports.CreateProduct = async (req, res) => {
             });
         }
 
+        // Parse images if it's a string (from JSON)
+        let parsedImages = images;
+        if (typeof images === 'string') {
+            try {
+                parsedImages = JSON.parse(images);
+            } catch (e) {
+                parsedImages = [];
+            }
+        }
+
         const product = new ProductModel({
             seller: sellerId,
             title,
@@ -370,10 +458,13 @@ module.exports.CreateProduct = async (req, res) => {
             stock,
             expiryDate: expiryDate ? new Date(expiryDate) : null,
             tags: Array.isArray(tags) ? tags : [tags],
+            images: parsedImages, // Store Cloudinary image data
             isAvailable: stock > 0
         });
 
         await product.save();
+
+        console.log('[CREATE PRODUCT] ✅ Product created with images:', parsedImages.length);
 
         res.status(201).json({
             success: true,
@@ -447,13 +538,22 @@ module.exports.UpdateProduct = async (req, res) => {
         // Fields that can be updated
         const allowedUpdates = [
             'title', 'description', 'category', 'subCategory',
-            'price', 'unit', 'minimumOrder', 'stock', 'expiryDate', 'tags'
+            'price', 'unit', 'minimumOrder', 'stock', 'expiryDate', 'tags', 'images'
         ];
 
         // Update only allowed fields
         allowedUpdates.forEach(field => {
             if (updateData[field] !== undefined) {
-                product[field] = updateData[field];
+                // Parse images if it's a string (from JSON)
+                if (field === 'images' && typeof updateData[field] === 'string') {
+                    try {
+                        product[field] = JSON.parse(updateData[field]);
+                    } catch (e) {
+                        product[field] = [];
+                    }
+                } else {
+                    product[field] = updateData[field];
+                }
             }
         });
 
@@ -461,6 +561,8 @@ module.exports.UpdateProduct = async (req, res) => {
         product.isAvailable = product.stock > 0;
 
         await product.save();
+
+        console.log('[UPDATE PRODUCT] ✅ Product updated:', productId);
 
         res.status(200).json({
             success: true,

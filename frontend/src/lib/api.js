@@ -124,6 +124,11 @@ export const sellerAPI = {
   getOrderWithChat: (id) => api.get(`/seller/orders/${id}`),
   getOrders: (params) => api.get('/seller/orders', {params}),
   initiatePayment: (id) => api.post(`/seller/orders/${id}/initiate-payment`),
+  // Image upload
+  uploadImages: (formData) => api.post('/seller/upload-images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  deleteImage: (publicId) => api.delete('/seller/delete-image', { data: { publicId } }),
 };
 
 export const chatAPI = {

@@ -41,6 +41,9 @@ const productSchema = new mongoose.Schema({
     url: {
       type: String,
       required: true
+    },
+    publicId: {
+      type: String // Cloudinary public ID for deletion
     }
   }],
   stock: {

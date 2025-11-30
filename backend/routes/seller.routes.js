@@ -5,6 +5,7 @@ const body = require("express-validator");
 
 const sellerController = require("../controllers/seller.controllers");
 const {authSeller} = require("../middlewares/auth.middleware");
+const { upload } = require("../libs/cloudinary");
 
 router.post("/register", sellerController.Register);
 router.get("/verifySeller/:token", sellerController.VerifySeller); 
@@ -13,6 +14,10 @@ router.get("/logout", sellerController.Logout);
 
 router.get("/profile", authSeller, sellerController.GetProfile);
 
+
+// IMAGE UPLOAD ROUTE
+router.post("/upload-images", authSeller, upload.array('images', 5), sellerController.UploadImages);
+router.delete("/delete-image", authSeller, sellerController.DeleteImage);
 
 // PRODUCT MANAGEMENT ROUTES
 router.get("/products", authSeller, sellerController.GetProducts); // Get seller's products

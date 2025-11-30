@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { sellerAPI } from '../../lib/api';
-import { ArrowLeft, Save, Upload, Package } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Package, X, Loader } from 'lucide-react';
 
 const AddProduct = () => {
   const { productId } = useParams();
@@ -24,7 +24,8 @@ const AddProduct = () => {
     expiryDate: '',
     tags: ''
   });
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState([]); // Array of { url, publicId } for uploaded images
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -70,6 +71,7 @@ const AddProduct = () => {
         tags: product.tags ? product.tags.join(', ') : ''
       });
       
+      // Load existing images
       setImages(product.images || []);
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -88,14 +90,62 @@ const AddProduct = () => {
     setError('');
   };
 
-  const handleImageUpload = (e) => {
+  // Upload images to Cloudinary
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    // In a real app, you'd upload these to a cloud service
-    // For now, we'll just store the file objects
-    setImages(prev => [...prev, ...files.slice(0, 5 - prev.length)]);
+    
+    if (files.length === 0) return;
+    
+    // Check max images limit
+    const remainingSlots = 5 - images.length;
+    if (files.length > remainingSlots) {
+      setError(`You can only upload ${remainingSlots} more image(s)`);
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+
+    try {
+      // Create FormData and append files
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('images', file);
+      });
+
+      // Upload to Cloudinary via backend
+      const response = await sellerAPI.uploadImages(formData);
+      
+      if (response.data.success) {
+        // Add uploaded images to state
+        setImages(prev => [...prev, ...response.data.images]);
+        console.log('Images uploaded successfully:', response.data.images);
+      } else {
+        setError('Failed to upload images');
+      }
+    } catch (err) {
+      console.error('Error uploading images:', err);
+      setError(err.response?.data?.message || 'Failed to upload images');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const removeImage = (index) => {
+  // Remove image (delete from Cloudinary if it has publicId)
+  const removeImage = async (index) => {
+    const imageToRemove = images[index];
+    
+    // If image has publicId (uploaded to Cloudinary), delete it
+    if (imageToRemove.publicId) {
+      try {
+        await sellerAPI.deleteImage(imageToRemove.publicId);
+        console.log('Image deleted from Cloudinary:', imageToRemove.publicId);
+      } catch (err) {
+        console.error('Error deleting image:', err);
+        // Still remove from local state even if Cloudinary delete fails
+      }
+    }
+    
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -125,7 +175,8 @@ const AddProduct = () => {
         stock: parseInt(formData.stock),
         minimumOrder: parseInt(formData.minimumOrder),
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        expiryDate: formData.expiryDate || null
+        expiryDate: formData.expiryDate || null,
+        images: images // Include uploaded images
       };
 
       if (isEditing) {
@@ -384,48 +435,50 @@ const AddProduct = () => {
                 <h3 className="text-xl font-semibold text-gray-900 mb-6">Product Images</h3>
                 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                  {/* Existing Images */}
+                  {/* Existing/Uploaded Images */}
                   {images.map((image, index) => (
                     <div key={index} className="relative group">
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        {image.url ? (
-                          <img 
-                            src={image.url} 
-                            alt={`Product ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <img 
-                            src={URL.createObjectURL(image)} 
-                            alt={`Product ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
+                        <img 
+                          src={image.url} 
+                          alt={`Product ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                       >
-                        <span className="w-4 h-4 block">×</span>
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
 
                   {/* Upload Button */}
                   {images.length < 5 && (
-                    <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 transition-colors cursor-pointer flex flex-col items-center justify-center">
-                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                      <span className="text-sm text-gray-600 text-center">
-                        Add Image<br />
-                        <span className="text-xs">({5 - images.length} remaining)</span>
-                      </span>
+                    <label className={`aspect-square border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 transition-colors cursor-pointer flex flex-col items-center justify-center ${uploading ? 'pointer-events-none opacity-50' : ''}`}>
+                      {uploading ? (
+                        <>
+                          <Loader className="w-8 h-8 text-primary-500 mb-2 animate-spin" />
+                          <span className="text-sm text-gray-600">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                          <span className="text-sm text-gray-600 text-center">
+                            Add Image<br />
+                            <span className="text-xs">({5 - images.length} remaining)</span>
+                          </span>
+                        </>
+                      )}
                       <input
                         type="file"
                         multiple
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
+                        disabled={uploading}
                       />
                     </label>
                   )}
@@ -447,7 +500,7 @@ const AddProduct = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || uploading}
                   className="btn-primary flex items-center space-x-2 disabled:opacity-50"
                 >
                   {loading ? (
