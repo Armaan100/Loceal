@@ -14,6 +14,7 @@ const { getCoordinatesFromAddress } = require("../libs/geocoding");
 const { default: mongoose } = require("mongoose");
 const { createTransport } = require("nodemailer");
 const orderModel = require("../models/order.model");
+const FRONTEND_URL = process.env.FRONTEND_URL || `https://loceal.onrender.com`;
 
 module.exports.Register = async (req, res) => {
     try {
@@ -166,7 +167,7 @@ module.exports.Register = async (req, res) => {
             <p class="message">Please verify your email address to activate your account.</p>
 
             <div style="text-align: center;">
-                <a href="http://localhost:${process.env.FRONTEND_PORT}/customer/verifyCustomer/${token}" class="button">Verify Email</a>
+                <a href="${FRONTEND_URL}/customer/verifyCustomer/${token}" class="button">Verify Email</a>
             </div>
 
             <p class="footer">If you did not sign up for this, you can ignore this email.</p>

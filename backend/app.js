@@ -19,9 +19,10 @@ const adminRoutes = require("./routes/admin.routes");
 const debugRoutes = require('./routes/debug.routes');
 
 // middlewares
+const FRONTEND_URL = process.env.FRONTEND_URL || `http://localhost:${process.env.FRONTEND_PORT || 3000}`;
 app.use(cors({
     origin: [
-        `http://localhost:${process.env.FRONTEND_PORT || 3000}`, // My frontend URL
+        FRONTEND_URL,
         "https://loceal.netlify.app"
     ],
     credentials: true

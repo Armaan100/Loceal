@@ -18,10 +18,12 @@ const ChatRoomModel = require('./models/chatRoom.model');
 const MessageModel = require('./models/message.model');
 
 // Initialize Socket.io
+const FRONTEND_URL = process.env.FRONTEND_URL || `http://localhost:${process.env.FRONTEND_PORT || 3000}`;
+
 const io = socketIo(server, {
   cors: {
     origin: [
-      `http://localhost:${process.env.FRONTEND_PORT || 3000}`, // My frontend URL
+      FRONTEND_URL,
       "https://loceal.netlify.app"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
