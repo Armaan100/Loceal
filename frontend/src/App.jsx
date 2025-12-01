@@ -11,6 +11,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 // Pages
 import HomePage from './pages/Home/HomePage';
 import ContactUs from './pages/Contact/ContactUs';
+import OurStory from './pages/Story/OurStory';
 import CustomerLogin from './pages/Auth/CustomerLogin';
 import CustomerRegister from './pages/Auth/CustomerRegister';
 import SellerLogin from './pages/Auth/SellerLogin';
@@ -50,6 +51,7 @@ function App() {
                 {/* Public Routes */}
                 <Route path="/" element={<HomePage />} />
                 <Route path="/contact" element={<ContactUs />} />
+                <Route path="/our-story" element={<OurStory />} />
                 <Route path="/customer/login" element={<CustomerLogin />} />
                 <Route path="/customer/register" element={<CustomerRegister />} />
                 <Route path="/seller/login" element={<SellerLogin />} />
