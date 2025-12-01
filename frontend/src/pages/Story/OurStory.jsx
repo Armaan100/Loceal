@@ -90,7 +90,7 @@ const OurStory = () => {
           <div className="bg-primary-700/60 backdrop-blur-sm rounded-2xl p-8 md:p-12 border border-primary-500/30">
             <div className="prose prose-lg text-center">
               <p className="text-primary-100 text-lg md:text-xl leading-relaxed mb-6">
-                In 2025, four passionate students came together with a shared vision — 
+                We are a group of four passionate 3rd Year Computer Science Engineering students, came together with a shared vision — 
                 <span className="text-white font-semibold"> to revolutionize how local communities buy and sell goods</span>. 
                 We noticed a gap: online marketplaces were convenient but impersonal, 
                 while local shops struggled to reach nearby customers.
@@ -179,11 +179,11 @@ const OurStory = () => {
         </div>
 
         {/* Footer */}
-        <div className="text-center">
+        {/* <div className="text-center">
           <p className="text-primary-100 flex items-center justify-center gap-2">
             Made with <Heart className="w-5 h-5 text-red-400 fill-red-400" /> in India
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );
